@@ -1,0 +1,16 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# tfvars (민감정보 있을 수 있음)
+*.tfvars
+
+# CLI output files
+*.txt
+
+# OS
+.DS_Store
+
