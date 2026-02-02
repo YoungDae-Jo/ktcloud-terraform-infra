@@ -1,10 +1,7 @@
-<<<<<<< HEAD
 ############################################
 # AMI
 ############################################
 
-=======
->>>>>>> 02ddefc (feat: Week1 Day1 - VPC, Subnet, IGW, Monitoring EC2 with Terraform)
 data "aws_ami" "ubuntu_2204" {
   most_recent = true
   owners      = ["099720109477"] # Canonical
@@ -20,13 +17,6 @@ data "aws_ami" "ubuntu_2204" {
   }
 }
 
-<<<<<<< HEAD
-############################################
-# IAM: reuse existing Role + existing Instance Profile
-# - Role: ReadTagsForAnsible (already exists)
-# - Instance Profile: ReadTagsForAnsible (already exists)
-# Add minimum permissions to read GH PAT from SSM Parameter Store.
-############################################
 
 data "aws_iam_role" "read_tags_for_ansible" {
   name = "ReadTagsForAnsible"
@@ -36,9 +26,6 @@ data "aws_iam_instance_profile" "read_tags_for_ansible" {
   name = "ReadTagsForAnsible"
 }
 
-# --- Extra policy: read GH PAT from SSM (SecureString) ---
-# 필요 최소 권한: ssm:GetParameter (with-decryption)
-# SecureString + CMK 사용 시 kms:Decrypt도 필요할 수 있음 (var.ssm_kms_key_arn에 ARN 넣으면 자동 추가)
 
 data "aws_iam_policy_document" "runner_ssm_policy" {
   statement {
@@ -73,14 +60,11 @@ resource "aws_iam_role_policy" "read_pat_from_ssm" {
 # Security Group (Monitoring)
 ############################################
 
-=======
->>>>>>> 02ddefc (feat: Week1 Day1 - VPC, Subnet, IGW, Monitoring EC2 with Terraform)
 resource "aws_security_group" "monitoring" {
   name        = "${var.project_name}-sg-monitoring"
   description = "Monitoring SG (Grafana/Prometheus/SSH)"
   vpc_id      = var.vpc_id
 
-<<<<<<< HEAD
   # Grafana
   ingress {
     description = "Grafana from Admin CIDRs"
@@ -100,16 +84,12 @@ resource "aws_security_group" "monitoring" {
   }
 
   # SSH
-=======
->>>>>>> 02ddefc (feat: Week1 Day1 - VPC, Subnet, IGW, Monitoring EC2 with Terraform)
   ingress {
     description = "SSH"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-<<<<<<< HEAD
     cidr_blocks = var.allowed_ssh_cidrs
-=======
     cidr_blocks = [var.allowed_ssh_cidr]
   }
 
@@ -136,7 +116,6 @@ resource "aws_security_group" "monitoring" {
     to_port     = 9100
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
->>>>>>> 02ddefc (feat: Week1 Day1 - VPC, Subnet, IGW, Monitoring EC2 with Terraform)
   }
 
   egress {
@@ -150,20 +129,6 @@ resource "aws_security_group" "monitoring" {
     Name = "${var.project_name}-sg-monitoring"
   }
 }
-
-<<<<<<< HEAD
-############################################
-# UserData: GitHub org-level self-hosted runner bootstrap
-# - Fetch PAT from SSM SecureString (var.ssm_pat_param_name)
-# - Register runner to org (var.github_org)
-# - Labels include "monitoring,linux,x64"
-# - Install as systemd service and auto-start
-#
-# IMPORTANT:
-# - Do NOT embed bash heredoc with ${...} expansions directly in HCL
-# - Use templatefile() with an external .tpl to avoid HCL parsing errors
-############################################
-
 locals {
   user_data = templatefile("${path.module}/userdata_runner.sh.tpl", {
     ORG            = var.github_org
@@ -175,7 +140,6 @@ locals {
 ############################################
 # Monitoring EC2
 ############################################
-=======
 locals {
   user_data = <<-EOT
     #!/bin/bash
@@ -216,7 +180,6 @@ locals {
     docker compose up -d
   EOT
 }
->>>>>>> 02ddefc (feat: Week1 Day1 - VPC, Subnet, IGW, Monitoring EC2 with Terraform)
 
 resource "aws_instance" "monitoring" {
   ami                    = data.aws_ami.ubuntu_2204.id
@@ -227,7 +190,6 @@ resource "aws_instance" "monitoring" {
   key_name  = var.key_name
   user_data = local.user_data
 
-<<<<<<< HEAD
   # Always attach existing IAM instance profile
   iam_instance_profile = data.aws_iam_instance_profile.read_tags_for_ansible.name
 
@@ -236,10 +198,8 @@ resource "aws_instance" "monitoring" {
     Role = "monitoring"
   }
 }
-=======
   tags = {
     Name = "${var.project_name}-monitoring"
   }
 }
 
->>>>>>> 02ddefc (feat: Week1 Day1 - VPC, Subnet, IGW, Monitoring EC2 with Terraform)
