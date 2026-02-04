@@ -18,8 +18,8 @@ variable "private_subnet_cidrs" {
   type = list(string)
 }
 
-variable "allowed_ssh_cidr" {
-  type        = string
+variable "allowed_ssh_cidrs" {
+  type        = list(string)
   description = "SSH allowed CIDR (ex: your_public_ip/32)"
 }
 

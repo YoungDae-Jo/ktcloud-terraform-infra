@@ -15,8 +15,8 @@ module "monitoring" {
   vpc_id       = module.network.vpc_id
   subnet_id    = module.network.public_subnet_ids[0]
 
-  allowed_ssh_cidr = var.allowed_ssh_cidr
-  instance_type    = var.instance_type
-  key_name         = var.key_name
+  allowed_ssh_cidrs = var.allowed_ssh_cidrs
+  instance_type     = var.instance_type
+  key_name          = var.key_name
 }
 

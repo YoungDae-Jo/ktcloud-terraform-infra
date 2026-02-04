@@ -13,9 +13,9 @@ variable "subnet_id" {
   type        = string
 }
 
-variable "allowed_ssh_cidr" {
-  description = "SSH 접속을 허용할 CIDR (예: 본인 공인 IP /32)"
-  type        = string
+variable "allowed_ssh_cidrs" {
+  description = "SSH 접속을 허용할 CIDR 목록 (예: [본인 공인 IP/32, 조원 IP/32])"
+  type        = list(string)
 }
 
 variable "instance_type" {
