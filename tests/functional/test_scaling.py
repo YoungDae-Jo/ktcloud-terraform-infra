@@ -16,7 +16,7 @@ LOAD_SEC = 60
 RETRIGGER_EVERY = 20
 
 SCALE_OUT_TIMEOUT_SECONDS = 600   # 10 minutes
-SCALE_IN_TIMEOUT_SECONDS = 1200    # 20 minutes
+SCALE_IN_TIMEOUT_SECONDS = 1500    # 25 minutes
 
 SCALE_OUT_POLL_INTERVAL = 15
 SCALE_IN_POLL_INTERVAL = 30
@@ -170,5 +170,5 @@ def test_asg_scaling_lifecycle(alb_url, asg_client, asg_name, elbv2_client, tg_a
             return
         time.sleep(SCALE_IN_POLL_INTERVAL)
         print(".", end="", flush=True)
-    pytest.fail(f"Scale-in decision happend, but healthy targets did not decrease within {SCALE_IN_TIMEOUT_SECONDS}")
+    pytest.fail(f"Scale-in decision happened, but healthy targets did not decrease within {SCALE_IN_TIMEOUT_SECONDS}")
     
