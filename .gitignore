@@ -1,40 +1,18 @@
+# Terraform
 **/.terraform/*
 *.tfstate
 *.tfstate.*
 *.tfvars
-*.tfvars.json
 crash.log
-crash.*.log
-*.tfplan
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-.terraformrc
-terraform.rc
+*.log
 
+# Sensitive / keys
 *.pem
-*.key
-*.pub
-.aws/
-credentials
-access_keys.csv
 
-*.bak
-*.bak*
-userdata_runner.sh.tpl.bak*
-
+# OS / Editor
 .DS_Store
-Thumbs.db
+.idea/
 .vscode/
-.history/
+
+# Misc
 *.swp
-
-# Terraform plugin cache
-**/.terraform/*
-
-# Sensitive keys
-*.pem
-*.key
-
-*.bak
