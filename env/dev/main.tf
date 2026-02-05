@@ -92,6 +92,15 @@ resource "aws_security_group" "service" {
     to_port         = 22
     protocol        = "tcp"
     security_groups = [module.monitoring.monitoring_sg_id]
+resource "aws_security_group" "alb" {
+  name   = "${var.project_name}-alb-sg"
+  vpc_id = module.network.vpc_id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -102,6 +111,9 @@ resource "aws_security_group" "service" {
   }
 
   tags = { Name = "${var.project_name}-sg-service" }
+  tags = {
+    Name = "${var.project_name}-alb-sg"
+  }
 }
 
 module "alb" {
@@ -132,6 +144,30 @@ module "nat" {
   tags = {
     Name = "${var.project_name}-nat"
     Role = "nat"
+
+  alb_sg_id = aws_security_group.alb.id
+}
+
+resource "aws_security_group" "service" {
+  name   = "${var.project_name}-service-sg"
+  vpc_id = module.network.vpc_id
+
+  ingress {
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project_name}-service-sg"
   }
 }
 
@@ -154,3 +190,20 @@ module "asg" {
   min_size         = var.asg_min_size
   max_size         = var.asg_max_size
 }
+  name               = var.project_name
+  vpc_id = module.network.vpc_id
+  private_subnet_ids = module.network.private_subnet_ids
+  target_group_arns  = [module.alb.target_group_arn]
+
+  ami_id        = data.aws_ami.ubuntu_2204.id
+  instance_type = "t3.micro"
+  key_name      = var.key_name
+  service_sg_id = aws_security_group.service.id
+
+  desired_capacity = 1
+  min_size         = 1
+  max_size         = 2
+
+  user_data = ""
+}
+

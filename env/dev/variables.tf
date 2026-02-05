@@ -63,3 +63,21 @@ variable "runner_labels" {
   type    = string
   default = "monitoring,linux,x64"
 }
+
+variable "allowed_ssh_cidrs" {
+  type        = list(string)
+  description = "SSH allowed CIDR (ex: your_public_ip/32)"
+}
+
+variable "instance_type" {
+  type        = string
+  description = "EC2 instance type for monitoring server"
+  default     = "t3.micro"
+}
+
+variable "key_name" {
+  type        = string
+  description = "EC2 key pair name (optional). If null, you can't SSH."
+  default     = "ktcloud-key"
+}
+

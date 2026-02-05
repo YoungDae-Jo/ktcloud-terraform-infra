@@ -32,6 +32,46 @@ variable "key_name" {
 
 variable "service_sg_id" {
   type = string
+  description = "ASG base name"
+  type        = string
+}
+
+variable "vpc_id" {
+  description = "VPC ID"
+  type        = string
+}
+
+variable "private_subnet_ids" {
+  description = "Private subnet IDs for ASG"
+  type        = list(string)
+}
+
+variable "target_group_arns" {
+  description = "ALB target group ARNs to attach"
+  type        = list(string)
+  default     = []
+}
+
+variable "ami_id" {
+  description = "AMI ID for service instances"
+  type        = string
+}
+
+variable "instance_type" {
+  description = "EC2 instance type"
+  type        = string
+  default     = "t3.micro"
+}
+
+variable "key_name" {
+  description = "EC2 key pair name (optional if using SSM only)"
+  type        = string
+  default     = null
+}
+
+variable "service_sg_id" {
+  description = "Security Group ID for service instances"
+  type        = string
 }
 
 variable "desired_capacity" {
@@ -58,3 +98,8 @@ variable "iam_instance_profile_name" {
   type    = string
   default = null
 }
+  description = "User data script (plain text). Will be base64-encoded."
+  type        = string
+  default     = ""
+}
+

@@ -66,6 +66,10 @@ resource "aws_launch_template" "this" {
     http_tokens            = "required"
     instance_metadata_tags = "enabled"
   }
+  # key_name is optional (SSM-only environments may set null)
+  key_name = var.key_name
+
+  user_data = var.user_data != "" ? base64encode(var.user_data) : null
 
   tag_specifications {
     resource_type = "instance"
@@ -73,6 +77,7 @@ resource "aws_launch_template" "this" {
       Name             = "${var.name}-service"
       Role             = "asg"
       PrometheusScrape = "true"
+      Name = "${var.name}-service"
     }
   }
 
@@ -134,3 +139,4 @@ resource "aws_autoscaling_group" "this" {
     create_before_destroy = true
   }
 }
+
