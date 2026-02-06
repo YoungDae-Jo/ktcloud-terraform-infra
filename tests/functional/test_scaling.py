@@ -10,9 +10,9 @@ from tests.utils import now_str, get_asg_desired_capacity, get_healthy_target_in
 pytestmark = pytest.mark.scaling
 
 # ---- Constants
-LOAD_THREAD_COUNT = 6 ##Flask 6
+LOAD_THREAD_COUNT = 30 ##6
 LOAD_SEC = 60
-RETRIGGER_EVERY = 20
+RETRIGGER_EVERY = 1 ##20
 
 SCALE_OUT_TIMEOUT_SECONDS = 720   # 12 min
 SCALE_IN_TIMEOUT_SECONDS = 1500    # 25 min
@@ -20,7 +20,7 @@ SCALE_IN_TIMEOUT_SECONDS = 1500    # 25 min
 SCALE_OUT_POLL_INTERVAL = 15
 SCALE_IN_POLL_INTERVAL = 30
 
-WORK_REQUEST_TIMEOUT = 8  
+WORK_REQUEST_TIMEOUT = 5
 
 # ---- Test-only Load Generator
 def load_generator(base_url, stop_event):
@@ -99,7 +99,7 @@ def test_asg_scaling_lifecycle(alb_url, asg_client, asg_name, elbv2_client, tg_a
         
     # ---- Step 4. Load Stop    
     finally:
-        print(f"\n[{now_str()}] [INFO] Stopping load generation")
+        print(f"[{now_str()}] [INFO] Stopping load generation")
         stop_event.set()
         for t in threads:
             t.join()
@@ -130,7 +130,7 @@ def test_asg_scaling_lifecycle(alb_url, asg_client, asg_name, elbv2_client, tg_a
 
     # ---- Step 6. Scale-in decision check (DesiredCapacity 감소)
     print(
-        f"[{now_str()}] [CHECK] Waiting for scale-in decision (timeout={SCALE_IN_TIMEOUT_SECONDS}s)...",
+        f"\n[{now_str()}] [CHECK] Waiting for scale-in decision (timeout={SCALE_IN_TIMEOUT_SECONDS}s)...",
         end="", flush=True,
     )
     start_in = time.time()

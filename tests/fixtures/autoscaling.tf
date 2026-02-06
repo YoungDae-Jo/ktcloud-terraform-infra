@@ -38,6 +38,6 @@ resource "aws_autoscaling_policy" "cpu_target" {
     predefined_metric_specification {
       predefined_metric_type = "ASGAverageCPUUtilization"
     }
-    target_value = 70.0 #scaling test 용으로 올려두었습니다. 원래 50-60정도.
+    target_value = 60.0 
   }
 }
