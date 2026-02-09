@@ -29,3 +29,11 @@ Thumbs.db
 .vscode/
 .history/
 *.swp
+
+# Terraform plugin cache
+**/.terraform/*
+
+# Sensitive keys
+*.pem
+*.key
+

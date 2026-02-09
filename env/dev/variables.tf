@@ -66,18 +66,39 @@ variable "runner_labels" {
 
 variable "allowed_ssh_cidrs" {
   type        = list(string)
-  description = "SSH allowed CIDR (ex: your_public_ip/32)"
-}
-
-variable "instance_type" {
-  type        = string
-  description = "EC2 instance type for monitoring server"
-  default     = "t3.micro"
+  description = "SSH allowed CIDR"
 }
 
 variable "key_name" {
-  type        = string
-  description = "EC2 key pair name (optional). If null, you can't SSH."
-  default     = "ktcloud-key"
+  type    = string
+  default = "ktcloud-key"
+}
+
+# Monitoring EC2
+variable "monitoring_instance_type" {
+  type    = string
+  default = "t3.micro"
+}
+
+# Service (ASG)
+variable "service_instance_type" {
+  type    = string
+  default = "t3.micro"
+}
+
+# ASG Capacity
+variable "asg_desired_capacity" {
+  type    = number
+  default = 1
+}
+
+variable "asg_min_size" {
+  type    = number
+  default = 1
+}
+
+variable "asg_max_size" {
+  type    = number
+  default = 2
 }
 
