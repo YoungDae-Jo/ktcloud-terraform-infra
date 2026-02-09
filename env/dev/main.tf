@@ -31,7 +31,7 @@ module "network" {
 }
 
 ############################################
-# Monitoring EC2
+# Monitoring EC2 (Bastion)
 ############################################
 
 module "monitoring" {
@@ -47,7 +47,7 @@ module "monitoring" {
 }
 
 ############################################
-# ALB SG
+# ALB Security Group
 ############################################
 
 resource "aws_security_group" "alb" {
@@ -55,6 +55,7 @@ resource "aws_security_group" "alb" {
   vpc_id = module.network.vpc_id
 
   ingress {
+    description = "HTTP from Internet"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -62,6 +63,7 @@ resource "aws_security_group" "alb" {
   }
 
   egress {
+    description = "ALL outbound"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -88,21 +90,40 @@ module "alb" {
 }
 
 ############################################
-# Service SG
+# Service Security Group
 ############################################
 
 resource "aws_security_group" "service" {
   name   = "${var.project_name}-service-sg"
   vpc_id = module.network.vpc_id
 
+  ##################################################
+  # ALB → Service (HTTP)
+  ##################################################
   ingress {
+    description     = "HTTP from ALB"
     from_port       = 80
     to_port         = 80
     protocol        = "tcp"
     security_groups = [aws_security_group.alb.id]
   }
 
+  ##################################################
+  # Monitoring(Bastion) → Service (SSH)
+  ##################################################
+  ingress {
+    description     = "SSH from Monitoring Bastion"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [module.monitoring.monitoring_sg_id]
+  }
+
+  ##################################################
+  # Outbound
+  ##################################################
   egress {
+    description = "ALL outbound"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -115,7 +136,7 @@ resource "aws_security_group" "service" {
 }
 
 ############################################
-# ASG
+# ASG Module
 ############################################
 
 module "asg" {
@@ -135,6 +156,9 @@ module "asg" {
   min_size         = var.asg_min_size
   max_size         = var.asg_max_size
 
+  ##################################################
+  # User Data — nginx 자동 설치
+  ##################################################
   user_data = <<-EOF
     #!/bin/bash
     set -eux
