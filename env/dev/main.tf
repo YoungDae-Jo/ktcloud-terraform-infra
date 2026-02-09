@@ -1,3 +1,7 @@
+############################################
+# AMI
+############################################
+
 data "aws_ami" "ubuntu_2204" {
   most_recent = true
   owners      = ["099720109477"]
@@ -13,6 +17,10 @@ data "aws_ami" "ubuntu_2204" {
   }
 }
 
+############################################
+# Network
+############################################
+
 module "network" {
   source = "../../modules/network"
 
@@ -22,6 +30,10 @@ module "network" {
   private_subnet_cidrs = var.private_subnet_cidrs
 }
 
+############################################
+# Monitoring EC2
+############################################
+
 module "monitoring" {
   source = "../../modules/monitoring"
 
@@ -30,9 +42,13 @@ module "monitoring" {
   subnet_id    = module.network.public_subnet_ids[0]
 
   allowed_ssh_cidrs = var.allowed_ssh_cidrs
-  instance_type     = var.instance_type
+  instance_type     = var.monitoring_instance_type
   key_name          = var.key_name
 }
+
+############################################
+# ALB SG
+############################################
 
 resource "aws_security_group" "alb" {
   name   = "${var.project_name}-alb-sg"
@@ -57,6 +73,10 @@ resource "aws_security_group" "alb" {
   }
 }
 
+############################################
+# ALB Module
+############################################
+
 module "alb" {
   source = "../../modules/alb"
 
@@ -66,6 +86,10 @@ module "alb" {
 
   alb_sg_id = aws_security_group.alb.id
 }
+
+############################################
+# Service SG
+############################################
 
 resource "aws_security_group" "service" {
   name   = "${var.project_name}-service-sg"
@@ -90,23 +114,35 @@ resource "aws_security_group" "service" {
   }
 }
 
+############################################
+# ASG
+############################################
+
 module "asg" {
   source = "../../modules/asg"
 
   name               = var.project_name
-  vpc_id = module.network.vpc_id
+  vpc_id             = module.network.vpc_id
   private_subnet_ids = module.network.private_subnet_ids
   target_group_arns  = [module.alb.target_group_arn]
 
   ami_id        = data.aws_ami.ubuntu_2204.id
-  instance_type = "t3.micro"
+  instance_type = var.service_instance_type
   key_name      = var.key_name
   service_sg_id = aws_security_group.service.id
 
-  desired_capacity = 1
-  min_size         = 1
-  max_size         = 2
+  desired_capacity = var.asg_desired_capacity
+  min_size         = var.asg_min_size
+  max_size         = var.asg_max_size
 
-  user_data = ""
+  user_data = <<-EOF
+    #!/bin/bash
+    set -eux
+    apt-get update -y
+    apt-get install -y nginx
+    systemctl enable nginx
+    systemctl start nginx
+    echo "ok - $(hostname)" > /var/www/html/index.html
+  EOF
 }
 
