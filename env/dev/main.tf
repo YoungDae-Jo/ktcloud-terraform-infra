@@ -104,6 +104,35 @@ resource "aws_security_group" "service" {
     protocol        = "tcp"
     security_groups = [module.monitoring.monitoring_sg_id]
 ############################################
+# NAT (Public EC2 + EIP + Private RT default route)
+############################################
+
+module "nat" {
+  source = "../../modules/nat"
+
+  project_name = var.project_name
+  vpc_id       = module.network.vpc_id
+
+  # public_subnet_ids는 list -> 하나 선택
+  public_subnet_id       = module.network.public_subnet_ids[0]
+  private_route_table_id = module.network.private_route_table_id
+  vpc_cidr               = module.network.vpc_cidr
+  private_subnet_cidrs   = var.private_subnet_cidrs
+
+  ami_id        = data.aws_ami.ubuntu_2204.id
+  instance_type = "t3.micro"
+  key_name      = var.key_name
+  bastion_sg_id = module.monitoring.monitoring_sg_id
+
+
+
+  tags = {
+    Environment = var.env
+    ManagedBy   = "Terraform"
+  }
+}
+
+############################################
 # ALB Security Group
 ############################################
 
