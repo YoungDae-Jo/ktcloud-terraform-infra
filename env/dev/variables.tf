@@ -56,3 +56,8 @@ variable "asg_max_size" {
   default = 2
 }
 
+variable "env" {
+  description = "Environment name (e.g. dev, prod)"
+  type        = string
+}
+
