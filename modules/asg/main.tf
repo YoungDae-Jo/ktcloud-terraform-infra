@@ -5,7 +5,6 @@ resource "aws_launch_template" "this" {
 
   vpc_security_group_ids = [var.service_sg_id]
 
-  # key_name is optional (SSM-only environments may set null)
   key_name = var.key_name
 
   user_data = var.user_data != "" ? base64encode(var.user_data) : null
@@ -13,7 +12,9 @@ resource "aws_launch_template" "this" {
   tag_specifications {
     resource_type = "instance"
     tags = {
-      Name = "${var.name}-service"
+      Name             = "${var.name}-service"
+      Role             = "service"
+      PrometheusScrape = "true"
     }
   }
 
@@ -48,6 +49,18 @@ resource "aws_autoscaling_group" "this" {
   tag {
     key                 = "Name"
     value               = "${var.name}-service"
+    propagate_at_launch = true
+  }
+
+  tag {
+    key                 = "Role"
+    value               = "service"
+    propagate_at_launch = true
+  }
+
+  tag {
+    key                 = "PrometheusScrape"
+    value               = "true"
     propagate_at_launch = true
   }
 

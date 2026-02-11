@@ -115,6 +115,7 @@ resource "aws_instance" "monitoring" {
 
   tags = {
     Name = "${var.project_name}-monitoring"
+    Role = "monitoring"
   }
 }
 
