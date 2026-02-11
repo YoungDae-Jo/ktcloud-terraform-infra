@@ -218,6 +218,17 @@ resource "aws_security_group" "service" {
   }
 
   ##################################################
+  # ALB → Service (App 8080)
+  ##################################################
+  ingress {
+    description     = "App from ALB (8080)"
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  ##################################################
   # Monitoring(Bastion) → Service (SSH)
   ##################################################
   ingress {
@@ -285,13 +296,20 @@ module "asg" {
   # User Data — nginx 자동 설치
   ##################################################
   user_data = <<-EOF
-    #!/bin/bash
-    set -eux
-    apt-get update -y
-    apt-get install -y nginx
-    systemctl enable nginx
-    systemctl start nginx
-    echo "ok - $(hostname)" > /var/www/html/index.html
-  EOF
-}
+  #!/bin/bash
+  set -eux
 
+  apt-get update -y
+  apt-get install -y nginx
+
+  # nginx를 8080 포트로 변경
+  sed -i 's/listen 80 default_server;/listen 8080 default_server;/' /etc/nginx/sites-available/default
+  sed -i 's/listen \[::\]:80 default_server;/listen [::]:8080 default_server;/' /etc/nginx/sites-available/default
+
+  nginx -t
+  systemctl enable nginx
+  systemctl restart nginx
+
+  echo "ok - $(hostname)" > /var/www/html/index.html
+EOF
+}

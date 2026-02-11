@@ -78,6 +78,8 @@ resource "aws_launch_template" "this" {
       Role             = "asg"
       PrometheusScrape = "true"
       Name = "${var.name}-service"
+      Role             = "service"
+      PrometheusScrape = "true"
     }
   }
 
@@ -118,6 +120,7 @@ resource "aws_autoscaling_group" "this" {
   tag {
     key                 = "Role"
     value               = "asg"
+    value               = "service"
     propagate_at_launch = true
   }
 
