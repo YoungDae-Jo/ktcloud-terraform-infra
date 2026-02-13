@@ -67,8 +67,6 @@ module "nat" {
   key_name      = var.key_name
   bastion_sg_id = module.monitoring.monitoring_sg_id
 
-
-
   tags = {
     Environment = var.env
     ManagedBy   = "Terraform"
@@ -160,6 +158,17 @@ resource "aws_security_group" "service" {
   }
 
   ##################################################
+  # Monitoring(Prometheus) → Service (Node Exporter 9100)
+  ##################################################
+  ingress {
+    description     = "Node Exporter from Monitoring"
+    from_port       = 9100
+    to_port         = 9100
+    protocol        = "tcp"
+    security_groups = [module.monitoring.monitoring_sg_id]
+  }
+
+  ##################################################
   # Outbound
   ##################################################
   egress {
@@ -217,3 +226,4 @@ module "asg" {
   echo "ok - $(hostname)" > /var/www/html/index.html
 EOF
 }
+

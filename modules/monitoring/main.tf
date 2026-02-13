@@ -13,42 +13,52 @@ data "aws_ami" "ubuntu_2204" {
   }
 }
 
+############################################
+# IAM: use existing Role, create Instance Profile
+# - Role(ReadTagsForAnsible) already exists in the account
+# - EC2 requires an Instance Profile to attach a role
+############################################
+
+data "aws_iam_role" "read_tags_for_ansible" {
+  name = "ReadTagsForAnsible"
+}
+
+resource "aws_iam_instance_profile" "read_tags_for_ansible" {
+  # Profile name must be unique in the account
+  name = "ReadTagsForAnsible-profile"
+  role = data.aws_iam_role.read_tags_for_ansible.name
+}
+
 resource "aws_security_group" "monitoring" {
   name        = "${var.project_name}-sg-monitoring"
   description = "Monitoring SG (Grafana/Prometheus/SSH)"
   vpc_id      = var.vpc_id
 
+  # Grafana
+  ingress {
+    description = "Grafana from Admin CIDRs"
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = var.allowed_ssh_cidrs
+  }
+
+  # Prometheus
+  ingress {
+    description = "Prometheus UI/API from Admin CIDRs"
+    from_port   = 9090
+    to_port     = 9090
+    protocol    = "tcp"
+    cidr_blocks = var.allowed_ssh_cidrs
+  }
+
+  # SSH
   ingress {
     description = "SSH"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = var.allowed_ssh_cidrs
-  }
-
-  ingress {
-    description = "Grafana"
-    from_port   = 3000
-    to_port     = 3000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "Prometheus"
-    from_port   = 9090
-    to_port     = 9090
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # (선택) Node Exporter용 - 필요하면 사용
-  ingress {
-    description = "Node Exporter"
-    from_port   = 9100
-    to_port     = 9100
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -112,6 +122,9 @@ resource "aws_instance" "monitoring" {
 
   key_name  = var.key_name
   user_data = local.user_data
+
+  # Always attach IAM instance profile for Ansible inventory/tag reads
+  iam_instance_profile = aws_iam_instance_profile.read_tags_for_ansible.name
 
   tags = {
     Name = "${var.project_name}-monitoring"

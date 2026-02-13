@@ -5,15 +5,14 @@ resource "aws_launch_template" "this" {
 
   vpc_security_group_ids = [var.service_sg_id]
 
-  key_name = var.key_name
-
+  key_name  = var.key_name
   user_data = var.user_data != "" ? base64encode(var.user_data) : null
 
   tag_specifications {
     resource_type = "instance"
     tags = {
       Name             = "${var.name}-service"
-      Role             = "service"
+      Role             = "asg"
       PrometheusScrape = "true"
     }
   }
@@ -42,6 +41,7 @@ resource "aws_autoscaling_group" "this" {
   }
 
   health_check_type         = length(var.target_group_arns) > 0 ? "ELB" : "EC2"
+
   health_check_grace_period = 60
 
   termination_policies = ["OldestInstance"]
@@ -54,7 +54,7 @@ resource "aws_autoscaling_group" "this" {
 
   tag {
     key                 = "Role"
-    value               = "service"
+    value               = "asg"
     propagate_at_launch = true
   }
 
