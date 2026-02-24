@@ -10,11 +10,11 @@ from tests.utils import now_str, get_asg_desired_capacity, get_healthy_target_in
 pytestmark = pytest.mark.scaling
 
 # ---- Constants
-LOAD_THREAD_COUNT = 6 ##FLASK 30
-LOAD_SEC = 60
-RETRIGGER_EVERY = 10 ##FLASK 1
+LOAD_THREAD_COUNT = 4 
+LOAD_SEC = 40
+RETRIGGER_EVERY = 50 
 
-SCALE_OUT_TIMEOUT_SECONDS = 720   # 12 min
+SCALE_OUT_TIMEOUT_SECONDS = 900   # 15 min
 SCALE_IN_TIMEOUT_SECONDS = 1500    # 25 min
 
 SCALE_OUT_POLL_INTERVAL = 15

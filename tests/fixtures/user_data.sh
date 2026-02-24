@@ -30,6 +30,11 @@ app.get('/', (req, res) => {
   if (!isAlive) {
     return res.status(500).send(`<h1>CRITICAL ERROR: Service on ${os.hostname()} is BROKEN!</h1>`);
   }
+  //현실적인 load test 위한 연산 추가
+  let dummy = 0;
+  for (let i=0; i<100000; i++){
+    dummy += Math.random();
+  }
   res.send(`<h1>Instance ID/Hostname: ${os.hostname()}</h1>`);
 });
 

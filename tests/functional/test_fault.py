@@ -113,7 +113,7 @@ def test_app_fault_recovery(alb_url, elbv2_client, tg_arn):
         flush=True,
     )
 
-    start_recover = time.time()
+    start_recover = time.time()                 
 
     while time.time() - start_recover < RECOVERY_TIMEOUT_SECONDS:
         current_ids = get_healthy_instance_ids(elbv2_client, tg_arn)
@@ -126,7 +126,7 @@ def test_app_fault_recovery(alb_url, elbv2_client, tg_arn):
                 availability = (success_rate / check_rate) * 100
                 print(
                     f"   Availability during recovery: "
-                    f"{availability:.1f} %" #({success_rate}/{check_rate})"
+                    f"{availability:.1f}%" #({success_rate}/{check_rate})"
                 )   
 
                 if availability < AVAILABILITY_THRESHOLD_PERCENT:
