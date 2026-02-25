@@ -1,13 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-# ========= CONFIG =========
 ORG="${ORG}"
 SSM_PARAM_NAME="${SSM_PARAM_NAME}"
 RUNNER_LABELS="${RUNNER_LABELS}"
 RUNNER_USER="runner"
 RUNNER_DIR="/opt/actions-runner"
-# ==========================
 
 log() { echo "[runner-bootstrap] $*"; }
 
