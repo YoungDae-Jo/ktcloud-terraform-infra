@@ -1,0 +1,40 @@
+flowchart TB
+  Internet((Internet))
+
+  subgraph AWS[AWS / ap-northeast-2]
+    subgraph VPC[VPC 10.0.0.0/16]
+      subgraph PublicA[Public Subnet A 10.0.1.0/24]
+        ALB[ALB :80]
+      end
+
+      subgraph PublicB[Public Subnet B 10.0.2.0/24]
+        MON[Monitoring EC2\n(Grafana/Prometheus/GitHub Runner)]
+      end
+
+      subgraph PrivateA[Private Subnet A 10.0.11.0/24]
+        ASG1[ASG Instance\n(Service :8080)]
+      end
+
+      subgraph PrivateB[Private Subnet B 10.0.12.0/24]
+        ASG2[ASG Instance\n(Service :8080)]
+      end
+
+      NAT[NAT Instance\n(Source/Dest Check OFF)]
+      SSM[(SSM Parameter Store\n/cicd/github/pat)]
+    end
+  end
+
+  GitHub[(GitHub Org\nktcloudmini)]
+  RunnerSvc[(actions.runner systemd service)]
+
+  Internet --> ALB
+  ALB -->|HTTP 8080| ASG1
+  ALB -->|HTTP 8080| ASG2
+
+  ASG1 -->|0.0.0.0/0 via NAT| NAT
+  ASG2 -->|0.0.0.0/0 via NAT| NAT
+  NAT --> Internet
+
+  MON --> SSM
+  MON --> GitHub
+  MON --> RunnerSvc
