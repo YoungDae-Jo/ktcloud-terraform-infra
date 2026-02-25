@@ -1,17 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-# ========= CONFIG =========
 ORG="${ORG}"
 SSM_PARAM_NAME="${SSM_PARAM_NAME}"
 RUNNER_LABELS="${RUNNER_LABELS}"
 RUNNER_USER="runner"
 RUNNER_DIR="/opt/actions-runner"
-# ==========================
 
 log() { echo "[runner-bootstrap] $*"; }
 
-# --- IMDSv2 token ---
 TOKEN="$(curl -fsS -X PUT "http://169.254.169.254/latest/api/token" \
   -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" || true)"
 
@@ -33,16 +30,12 @@ RUNNER_NAME="Monitoring-Runner-$${IID}"
 log "Runner name: $${RUNNER_NAME}"
 log "Region: $${AWS_REGION}"
 
-# --- Packages ---
 apt-get update -y
-apt-get install -y ca-certificates curl jq tar gzip git awscli software-properties-common
+apt-get install -y ca-certificates curl jq tar gzip git awscli ansible python3 python3-boto3 python3-botocore
+ansible-galaxy collection install amazon.aws || true
 
-# --- Ansible (for CD automation) ---
-add-apt-repository --yes --update ppa:ansible/ansible
-apt-get install -y ansible
 ansible --version || true
 
-# --- Runner user ---
 if ! id -u "$${RUNNER_USER}" >/dev/null 2>&1; then
   useradd -m -r -s /bin/bash "$${RUNNER_USER}"
 fi
@@ -51,14 +44,13 @@ mkdir -p "$${RUNNER_DIR}"
 chown -R "$${RUNNER_USER}:$${RUNNER_USER}" "$${RUNNER_DIR}"
 chmod 755 "$${RUNNER_DIR}"
 
-# --- Fetch PAT from SSM ---
 log "Fetching GH_PAT from SSM: ${SSM_PARAM_NAME}"
 GH_PAT="$(aws --region "$${AWS_REGION}" ssm get-parameter \
   --name "${SSM_PARAM_NAME}" --with-decryption \
   --query 'Parameter.Value' --output text)"
 
 if [ -z "$${GH_PAT}" ] || [ "$${GH_PAT}" = "None" ]; then
-  log "ERROR: GH_PAT is empty (check SSM parameter & IAM permission)"
+  log "ERROR: GH_PAT is empty"
   exit 1
 fi
 
@@ -68,7 +60,6 @@ ACCEPT_HEADER="Accept: application/vnd.github+json"
 
 cd "$${RUNNER_DIR}"
 
-# --- Remove existing local runner config if exists ---
 if [ -f "$${RUNNER_DIR}/config.sh" ] && [ -f "$${RUNNER_DIR}/.runner" ]; then
   log "Existing local runner config found. Removing..."
   ./svc.sh stop || true
@@ -78,10 +69,7 @@ if [ -f "$${RUNNER_DIR}/config.sh" ] && [ -f "$${RUNNER_DIR}/.runner" ]; then
     "$${GH_API}/orgs/${ORG}/actions/runners/remove-token" | jq -r '.token' || true)"
 
   if [ -n "$${REMOVE_TOKEN}" ] && [ "$${REMOVE_TOKEN}" != "null" ]; then
-    # NOTE: remove does not need --unattended (can warn); keep simple
     su -s /bin/bash -c "cd $${RUNNER_DIR} && ./config.sh remove --token $${REMOVE_TOKEN}" "$${RUNNER_USER}" || true
-  else
-    log "WARN: failed to get remove-token, continue anyway"
   fi
 fi
 
@@ -97,7 +85,7 @@ if [ ! -f "$${RUNNER_DIR}/config.sh" ]; then
   su -s /bin/bash -c "cd $${RUNNER_DIR} && ./bin/installdependencies.sh" "$${RUNNER_USER}" || true
 fi
 
-log "Cleaning up existing org runner with same name (if any)..."
+log "Cleaning up existing org runner with same name..."
 EXISTING_ID="$(curl -fsS -H "$${AUTH_HEADER}" -H "$${ACCEPT_HEADER}" \
   "$${GH_API}/orgs/${ORG}/actions/runners?per_page=100" \
   | jq -r --arg NAME "$${RUNNER_NAME}" '.runners[] | select(.name==$NAME) | .id' | head -n 1 || true)"
@@ -113,7 +101,7 @@ REG_TOKEN="$(curl -fsS -X POST -H "$${AUTH_HEADER}" -H "$${ACCEPT_HEADER}" \
   "$${GH_API}/orgs/${ORG}/actions/runners/registration-token" | jq -r '.token')"
 
 if [ -z "$${REG_TOKEN}" ] || [ "$${REG_TOKEN}" = "null" ]; then
-  log "ERROR: failed to get registration token (check PAT scopes/org settings)"
+  log "ERROR: failed to get registration token"
   exit 1
 fi
 
