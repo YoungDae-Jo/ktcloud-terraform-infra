@@ -1,10 +1,6 @@
-############################################
-# AMI
-############################################
-
 data "aws_ami" "ubuntu_2204" {
   most_recent = true
-  owners      = ["099720109477"] # Canonical
+  owners      = ["099720109477"]
 
   filter {
     name   = "name"
@@ -17,7 +13,6 @@ data "aws_ami" "ubuntu_2204" {
   }
 }
 
-
 data "aws_iam_role" "read_tags_for_ansible" {
   name = "ReadTagsForAnsible"
 }
@@ -25,7 +20,6 @@ data "aws_iam_role" "read_tags_for_ansible" {
 data "aws_iam_instance_profile" "read_tags_for_ansible" {
   name = "ReadTagsForAnsible"
 }
-
 
 data "aws_iam_policy_document" "runner_ssm_policy" {
   statement {
@@ -56,66 +50,47 @@ resource "aws_iam_role_policy" "read_pat_from_ssm" {
   policy = data.aws_iam_policy_document.runner_ssm_policy.json
 }
 
-############################################
-# Security Group (Monitoring)
-############################################
+data "aws_iam_policy_document" "monitoring_ec2_sd_policy" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "ec2:DescribeInstances",
+      "ec2:DescribeTags"
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "monitoring_ec2_sd" {
+  name   = "MonitoringEC2ServiceDiscovery"
+  role   = data.aws_iam_role.read_tags_for_ansible.id
+  policy = data.aws_iam_policy_document.monitoring_ec2_sd_policy.json
+}
 
 resource "aws_security_group" "monitoring" {
   name        = "${var.project_name}-sg-monitoring"
-  description = "Monitoring SG (Grafana/Prometheus/SSH)"
+  description = "Monitoring/Runner SG (Grafana/Prometheus/SSH)"
   vpc_id      = var.vpc_id
 
-  # Grafana
   ingress {
-    description = "Grafana from Admin CIDRs"
-    from_port   = 3000
-    to_port     = 3000
-    protocol    = "tcp"
-    cidr_blocks = var.allowed_ssh_cidrs
-  }
-
-  # Prometheus
-  ingress {
-    description = "Prometheus UI/API from Admin CIDRs"
-    from_port   = 9090
-    to_port     = 9090
-    protocol    = "tcp"
-    cidr_blocks = var.allowed_ssh_cidrs
-  }
-
-  # SSH
-  ingress {
-    description = "SSH"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = var.allowed_ssh_cidrs
-    cidr_blocks = [var.allowed_ssh_cidr]
   }
 
   ingress {
-    description = "Grafana"
     from_port   = 3000
     to_port     = 3000
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.allowed_ssh_cidrs
   }
 
   ingress {
-    description = "Prometheus"
     from_port   = 9090
     to_port     = 9090
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # (선택) Node Exporter용 - 필요하면 사용
-  ingress {
-    description = "Node Exporter"
-    from_port   = 9100
-    to_port     = 9100
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.allowed_ssh_cidrs
   }
 
   egress {
@@ -129,56 +104,13 @@ resource "aws_security_group" "monitoring" {
     Name = "${var.project_name}-sg-monitoring"
   }
 }
+
 locals {
   user_data = templatefile("${path.module}/userdata_runner.sh.tpl", {
     ORG            = var.github_org
     SSM_PARAM_NAME = var.ssm_pat_param_name
-    RUNNER_LABELS  = "self-hosted"
+    RUNNER_LABELS  = var.runner_labels
   })
-}
-
-############################################
-# Monitoring EC2
-############################################
-locals {
-  user_data = <<-EOT
-    #!/bin/bash
-    set -e
-
-    apt-get update -y
-    apt-get install -y docker.io docker-compose-plugin
-    systemctl enable docker
-    systemctl start docker
-
-    mkdir -p /opt/monitoring
-
-    cat > /opt/monitoring/prometheus.yml <<'YAML'
-    global:
-      scrape_interval: 15s
-    scrape_configs:
-      - job_name: "prometheus"
-        static_configs:
-          - targets: ["localhost:9090"]
-    YAML
-
-    cat > /opt/monitoring/docker-compose.yml <<'YAML'
-    services:
-      prometheus:
-        image: prom/prometheus
-        ports:
-          - "9090:9090"
-        volumes:
-          - /opt/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-
-      grafana:
-        image: grafana/grafana
-        ports:
-          - "3000:3000"
-    YAML
-
-    cd /opt/monitoring
-    docker compose up -d
-  EOT
 }
 
 resource "aws_instance" "monitoring" {
@@ -190,7 +122,6 @@ resource "aws_instance" "monitoring" {
   key_name  = var.key_name
   user_data = local.user_data
 
-  # Always attach existing IAM instance profile
   iam_instance_profile = data.aws_iam_instance_profile.read_tags_for_ansible.name
 
   tags = {
@@ -198,8 +129,3 @@ resource "aws_instance" "monitoring" {
     Role = "monitoring"
   }
 }
-  tags = {
-    Name = "${var.project_name}-monitoring"
-  }
-}
-

@@ -1,7 +1,5 @@
-# Network module variables
 variable "project_name" {
-  type    = string
-  default = "ktcloud-infra"
+  type = string
 }
 
 variable "vpc_cidr" {
@@ -14,14 +12,4 @@ variable "public_subnet_cidrs" {
 
 variable "private_subnet_cidrs" {
   type = list(string)
-  type    = string
 }
-
-variable "public_subnet_cidrs" {
-  type    = list(string)
-}
-
-variable "private_subnet_cidrs" {
-  type    = list(string)
-}
-

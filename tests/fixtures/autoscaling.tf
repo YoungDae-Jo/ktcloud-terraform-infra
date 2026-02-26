@@ -29,15 +29,15 @@ resource "aws_autoscaling_group" "app_asg" {
 
 #---- Scaling Policy
 resource "aws_autoscaling_policy" "cpu_target" {
-  name                   = "test-z33-web-cpu-scaling-policy"
-  autoscaling_group_name = aws_autoscaling_group.app_asg.name
-  policy_type            = "TargetTrackingScaling"
+  name                      = "test-z33-web-cpu-scaling-policy"
+  autoscaling_group_name    = aws_autoscaling_group.app_asg.name
+  policy_type               = "TargetTrackingScaling"
   estimated_instance_warmup = 180
 
   target_tracking_configuration {
     predefined_metric_specification {
       predefined_metric_type = "ASGAverageCPUUtilization"
     }
-    target_value = 60.0 
+    target_value = 60.0
   }
 }

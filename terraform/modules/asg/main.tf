@@ -40,7 +40,7 @@ resource "aws_autoscaling_group" "this" {
     version = "$Latest"
   }
 
-  health_check_type         = length(var.target_group_arns) > 0 ? "ELB" : "EC2"
+  health_check_type = length(var.target_group_arns) > 0 ? "ELB" : "EC2"
 
   health_check_grace_period = 60
 

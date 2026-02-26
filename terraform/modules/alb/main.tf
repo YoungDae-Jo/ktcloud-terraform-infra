@@ -8,13 +8,13 @@ resource "aws_lb" "this" {
 }
 
 resource "aws_lb_target_group" "this" {
-  name_prefix     = "tg-"
-  port     = 8080
-  protocol = "HTTP"
-  vpc_id   = var.vpc_id
+  name_prefix = "tg-"
+  port        = 8080
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
 
   health_check {
-    path                = "/"        # /health 엔드포인트가 있으면 "/health"로 변경
+    path                = "/" # /health 엔드포인트가 있으면 "/health"로 변경
     port                = "8080"
     matcher             = "200-399"
     healthy_threshold   = 2

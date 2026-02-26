@@ -4,25 +4,22 @@ variable "project_name" {
 }
 
 variable "vpc_id" {
-  description = "모니터링 서버가 생성될 VPC ID"
+  description = "모니터링/러너 서버가 생성될 VPC ID"
   type        = string
 }
 
 variable "subnet_id" {
-  description = "모니터링 서버가 생성될 Subnet ID"
+  description = "모니터링/러너 서버가 생성될 Subnet ID"
   type        = string
 }
 
 variable "allowed_ssh_cidrs" {
-  description = "SSH 접속을 허용할 CIDR 목록 (예: [본인 공인 IP/32, 조원 IP/32])"
+  description = "SSH/Grafana/Prometheus 접속을 허용할 CIDR 목록 (예: [본인 공인 IP/32, 조원 IP/32])"
   type        = list(string)
-variable "allowed_ssh_cidr" {
-  description = "SSH 접속을 허용할 CIDR (예: 본인 공인 IP /32)"
-  type        = string
 }
 
 variable "instance_type" {
-  description = "모니터링 서버 EC2 인스턴스 타입"
+  description = "EC2 인스턴스 타입"
   type        = string
   default     = "t3.micro"
 }
@@ -32,6 +29,7 @@ variable "key_name" {
   type        = string
   default     = null
 }
+
 ############################################
 # GitHub Actions Runner bootstrap vars
 ############################################
@@ -54,3 +52,8 @@ variable "ssm_kms_key_arn" {
   default     = ""
 }
 
+variable "runner_labels" {
+  description = "Runner labels (comma-separated)"
+  type        = string
+  default     = "monitoring,linux,x64"
+}

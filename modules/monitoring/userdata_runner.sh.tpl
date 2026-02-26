@@ -35,7 +35,49 @@ log "Region: $${AWS_REGION}"
 
 # --- Packages ---
 apt-get update -y
-apt-get install -y ca-certificates curl jq tar gzip git awscli software-properties-common
+apt-get install -y \
+  ca-certificates curl jq tar gzip git \
+  awscli software-properties-common \
+  python3-pip python3-boto3 python3-botocore
+
+# --- Default AWS region (make awscli work without --region) ---
+log "Setting default AWS region to $${AWS_REGION} (root/ubuntu/runner + system env)"
+
+# system-wide env (for non-interactive)
+cat >/etc/profile.d/aws-region.sh <<EOF
+export AWS_REGION="$${AWS_REGION}"
+export AWS_DEFAULT_REGION="$${AWS_REGION}"
+EOF
+chmod 644 /etc/profile.d/aws-region.sh
+
+# also for systemd/services (runner service 포함)
+if ! grep -q '^AWS_REGION=' /etc/environment 2>/dev/null; then
+  echo "AWS_REGION=$${AWS_REGION}" >> /etc/environment
+fi
+if ! grep -q '^AWS_DEFAULT_REGION=' /etc/environment 2>/dev/null; then
+  echo "AWS_DEFAULT_REGION=$${AWS_REGION}" >> /etc/environment
+fi
+
+write_aws_config () {
+  local home_dir="$1"
+  local owner="$2"
+  mkdir -p "$${home_dir}/.aws"
+  cat >"$${home_dir}/.aws/config" <<EOF
+[default]
+region = $${AWS_REGION}
+output = json
+EOF
+  chown -R "$${owner}:$${owner}" "$${home_dir}/.aws" || true
+  chmod 700 "$${home_dir}/.aws" || true
+  chmod 600 "$${home_dir}/.aws/config" || true
+}
+
+write_aws_config "/root" "root"
+
+# ubuntu user home exists on Ubuntu AMI
+if id -u ubuntu >/dev/null 2>&1; then
+  write_aws_config "/home/ubuntu" "ubuntu"
+fi
 
 # --- Ansible (for CD automation) ---
 add-apt-repository --yes --update ppa:ansible/ansible
@@ -46,6 +88,9 @@ ansible --version || true
 if ! id -u "$${RUNNER_USER}" >/dev/null 2>&1; then
   useradd -m -r -s /bin/bash "$${RUNNER_USER}"
 fi
+
+# runner에도 aws 기본 region 적용
+write_aws_config "/home/$${RUNNER_USER}" "$${RUNNER_USER}"
 
 mkdir -p "$${RUNNER_DIR}"
 chown -R "$${RUNNER_USER}:$${RUNNER_USER}" "$${RUNNER_DIR}"
@@ -78,7 +123,6 @@ if [ -f "$${RUNNER_DIR}/config.sh" ] && [ -f "$${RUNNER_DIR}/.runner" ]; then
     "$${GH_API}/orgs/${ORG}/actions/runners/remove-token" | jq -r '.token' || true)"
 
   if [ -n "$${REMOVE_TOKEN}" ] && [ "$${REMOVE_TOKEN}" != "null" ]; then
-    # NOTE: remove does not need --unattended (can warn); keep simple
     su -s /bin/bash -c "cd $${RUNNER_DIR} && ./config.sh remove --token $${REMOVE_TOKEN}" "$${RUNNER_USER}" || true
   else
     log "WARN: failed to get remove-token, continue anyway"
