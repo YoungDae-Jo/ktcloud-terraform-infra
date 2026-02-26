@@ -13,9 +13,15 @@ variable "subnet_id" {
   type        = string
 }
 
+<<<<<<< HEAD
 variable "allowed_ssh_cidrs" {
   description = "SSH 접속을 허용할 CIDR 목록 (예: [본인 공인 IP/32, 조원 IP/32])"
   type        = list(string)
+=======
+variable "allowed_ssh_cidr" {
+  description = "SSH 접속을 허용할 CIDR (예: 본인 공인 IP /32)"
+  type        = string
+>>>>>>> 02ddefc (feat: Week1 Day1 - VPC, Subnet, IGW, Monitoring EC2 with Terraform)
 }
 
 variable "instance_type" {
@@ -29,6 +35,7 @@ variable "key_name" {
   type        = string
   default     = null
 }
+<<<<<<< HEAD
 ############################################
 # GitHub Actions Runner bootstrap vars
 ############################################
@@ -50,3 +57,6 @@ variable "ssm_kms_key_arn" {
   type        = string
   default     = ""
 }
+=======
+
+>>>>>>> 02ddefc (feat: Week1 Day1 - VPC, Subnet, IGW, Monitoring EC2 with Terraform)

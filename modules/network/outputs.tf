@@ -19,6 +19,7 @@ output "internet_gateway_id" {
 output "public_route_table_id" {
   value = aws_route_table.public.id
 }
+<<<<<<< HEAD
 output "private_route_table_id" {
   value = aws_route_table.private.id
 }
@@ -26,4 +27,6 @@ output "private_route_table_id" {
 output "vpc_cidr" {
   value = aws_vpc.this.cidr_block
 }
+=======
+>>>>>>> 02ddefc (feat: Week1 Day1 - VPC, Subnet, IGW, Monitoring EC2 with Terraform)
 

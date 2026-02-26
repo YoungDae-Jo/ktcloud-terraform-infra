@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # KTCloud INFRA PROJECT (Terraform)
 
 ---
@@ -261,4 +262,19 @@ terraform apply
 docs/daily-log/week1-summary.md
 docs/runner-setup.md
 ```
+=======
+# KT Cloud Terraform Infrastructure Project
+
+##  Overview
+Terraform 기반 IaC 프로젝트로 AWS 인프라를 설계 및 자동화합니다.
+
+##  Architecture
+- VPC
+- Public / Private Subnet
+- Internet Gateway
+- Route Table
+- Monitoring EC2
+
+
+>>>>>>> 02ddefc (feat: Week1 Day1 - VPC, Subnet, IGW, Monitoring EC2 with Terraform)
 
