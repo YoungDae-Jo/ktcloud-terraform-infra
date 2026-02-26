@@ -1,109 +1,93 @@
-variable "project_name" { type = string }
-
-variable "vpc_cidr" { type = string }
-
-variable "public_subnet_cidrs" { type = list(string) }
-
-variable "private_subnet_cidrs" { type = list(string) }
-
-variable "allowed_ssh_cidrs" { type = list(string) }
-
-variable "key_name" { type = string }
-
-variable "monitoring_instance_type" {
-  type    = string
-  default = "t3.micro"
+variable "env" {
+  type        = string
+  description = "Environment name (e.g. dev, prod)"
 }
 
-variable "service_instance_type" {
-  type    = string
-  default = "t3.micro"
+variable "project_name" {
+  type        = string
+  description = "Project name prefix"
 }
 
-variable "nat_instance_type" {
-  type    = string
-  default = "t3.micro"
+variable "vpc_cidr" {
+  type        = string
+  description = "VPC CIDR"
 }
 
-variable "asg_desired_capacity" {
-  type    = number
-  default = 1
+variable "public_subnet_cidrs" {
+  type        = list(string)
+  description = "Public subnet CIDRs"
 }
 
-variable "asg_min_size" {
-  type    = number
-  default = 1
-}
-
-variable "asg_max_size" {
-  type    = number
-  default = 2
-}
-
-############################################
-# Runner vars (monitoring module)
-############################################
-
-variable "github_org" {
-  type    = string
-  default = "ktcloudmini"
-}
-
-variable "ssm_pat_param_name" {
-  type    = string
-  default = "/cicd/github/pat"
-}
-
-variable "ssm_kms_key_arn" {
-  type    = string
-  default = ""
-}
-
-variable "runner_labels" {
-  type    = string
-  default = "monitoring,linux,x64"
+variable "private_subnet_cidrs" {
+  type        = list(string)
+  description = "Private subnet CIDRs"
 }
 
 variable "allowed_ssh_cidrs" {
   type        = list(string)
-  description = "SSH allowed CIDR"
+  description = "CIDRs allowed to SSH into monitoring instance"
 }
 
 variable "key_name" {
-  type    = string
-  default = "ktcloud-key"
+  type        = string
+  description = "EC2 key pair name"
 }
 
-# Monitoring EC2
 variable "monitoring_instance_type" {
-  type    = string
-  default = "t3.micro"
+  type        = string
+  description = "Monitoring EC2 instance type"
+  default     = "t3.micro"
 }
 
-# Service (ASG)
 variable "service_instance_type" {
-  type    = string
-  default = "t3.micro"
+  type        = string
+  description = "Service EC2 instance type (ASG)"
+  default     = "t3.micro"
 }
 
-# ASG Capacity
+variable "nat_instance_type" {
+  type        = string
+  description = "NAT instance type"
+  default     = "t3.micro"
+}
+
 variable "asg_desired_capacity" {
-  type    = number
-  default = 1
+  type        = number
+  description = "ASG desired capacity"
+  default     = 1
 }
 
 variable "asg_min_size" {
-  type    = number
-  default = 1
+  type        = number
+  description = "ASG min size"
+  default     = 1
 }
 
 variable "asg_max_size" {
-  type    = number
-  default = 2
+  type        = number
+  description = "ASG max size"
+  default     = 2
 }
 
-variable "env" {
-  description = "Environment name (e.g. dev, prod)"
+# GitHub Runner / SSM
+variable "github_org" {
   type        = string
+  description = "GitHub organization name"
 }
 
+variable "ssm_pat_param_name" {
+  type        = string
+  description = "SSM Parameter name (SecureString) for GitHub PAT (include leading slash if used)"
+}
+
+variable "ssm_kms_key_arn" {
+  type        = string
+  description = "Optional KMS key ARN used to encrypt the PAT parameter"
+  default     = ""
+}
+
+variable "runner_labels" {
+  type        = string
+  description = "Runner labels"
+  default     = "monitoring,linux,x64"
+}
