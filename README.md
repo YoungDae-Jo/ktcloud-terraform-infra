@@ -1,471 +1,232 @@
-# KT Cloud Infra Project (Terraform 기반 운영 인프라)
+KTCloud Mini Project - Infrastructure (Terraform)
+1. 담당 영역
 
-##  Project Overview
+조영대 – Infrastructure (IaC / AWS Architecture)
 
-Terraform 기반 IaC(Infrastructure as Code)로  
-운영 가능한 AWS 인프라 아키텍처를 설계 및 구축.
+본 인프라 구성은 Terraform 기반 IaC(Infrastructure as Code) 방식으로 구축되었으며
+운영 환경에서도 재현 가능한 AWS 인프라 자동화를 목표로 설계되었습니다.
 
-###  설계 목표
+주요 역할
 
-- Public 노출은 ALB만 허용
-- Service 서버는 Private Subnet 고정
-- Outbound는 NAT Instance 경유만 허용
-- Monitoring EC2를 통한 Bastion / CD / Ansible 실행
-- destroy → apply 재현성 보장
-- Prometheus 연동을 위한 자동 모니터링 기반 구축
+AWS 인프라 아키텍처 설계
 
----
+Terraform 기반 IaC 구축
 
-#  전체 아키텍처
+Private 기반 보안 아키텍처 설계
 
-```mermaid
-flowchart TB
-  Internet((Internet))
+NAT 기반 Outbound 통신 구조 구현
 
-  subgraph Public Subnet
-    ALB[ALB]
-    NAT[NAT Instance]
-    MON[Monitoring EC2\n(Bastion + Runner + Ansible)]
-  end
+GitHub Actions Runner 자동화
 
-  subgraph Private Subnet
-    ASG[ASG Service Instances\n(Node Exporter :9100)]
-  end
+Monitoring 연동 준비(node_exporter)
 
-  Internet --> ALB
-  ALB --> ASG
+2. 전체 아키텍처
+Internet
+   │
+   ▼
+ALB (Public Subnet)
+   │
+   ▼
+ASG Service EC2 (Private Subnet)
+   │
+   ▼
+NAT Instance
+   │
+   ▼
+Internet Outbound
 
-  ASG -->|Outbound Only| NAT
-  NAT --> Internet
+운영/배포 관리 노드
 
-  MON -->|SSH 22| ASG
-  MON -->|Node Exporter 9100| ASG
+Monitoring EC2 (Public)
+ ├ Bastion SSH
+ ├ GitHub Actions Runner
+ ├ Ansible 실행 노드
+ └ Prometheus/Grafana 설치 예정
 
-  %% Prometheus (관제팀 설치 예정)
-  MON -. EC2 Service Discovery .-> ASG
-```
+핵심 설계 목표
 
----
+Service 서버는 Private Subnet
 
-#  인프라 구성 요소
+외부 노출은 ALB만 허용
 
-## 1 Network
+Service 서버는 인터넷 직접 접근 불가
 
-- VPC
-- Public / Private Subnet 분리
-- IGW 연결
-- Private Route → NAT Instance
-# KTCloud INFRA PROJECT (Terraform)
+Outbound는 NAT Instance 경유
 
----
+IaC 기반 destroy → apply 재현성 확보
 
-## 0. Goal
+3. 인프라 구성 요소
+VPC
+VPC CIDR : 10.0.0.0/16
 
-Terraform 기반으로 AWS 인프라를 IaC로 구축하고 아래 목표를 충족한다.
+구성
 
-* 구조: ALB (Public) → ASG(Service EC2, Private Subnet)
-* Monitoring EC2 (Public) 제공
-* Private Subnet 인스턴스는 NAT 통해서만 외부 통신
-* destroy → apply 재현성 확보
+Public Subnet
+ - ALB
+ - NAT Instance
+ - Monitoring EC2
 
-Day5 성공 기준:
+Private Subnet
+ - Service EC2 (ASG)
+4. Security Architecture
 
-* NAT 전용 EC2 분리
-* Private EC2 인터넷 통신 성공
-* nginx 자동 설치 성공
-* Target Group Healthy
-* ALB DNS 200 응답
-* ASG Scale-out 정상
-
----
-
-# 1. Architecture
-
-## High-level
+외부 접근 구조
 
 Internet
-↓
-ALB (Public Subnets)
-↓
-Target Group
-↓
-ASG Service EC2 (Private Subnets) → NAT → Internet
+   │
+   ▼
+ALB (80)
+   │
+   ▼
+Service EC2 (8080)
 
-검증 완료:
-- Public → Internet OK
-- Private → NAT 경유 Outbound OK
+보안 그룹 정책
 
----
+Source	Destination	Port	설명
+Internet	ALB	80	서비스 접근
+ALB SG	Service SG	8080	애플리케이션
+Monitoring SG	Service SG	22	SSH 관리
+Monitoring SG	Service SG	9100	Prometheus
+Service	NAT	ALL	Outbound
+5. NAT Instance
 
-## 2 NAT Instance
+Private 서버의 인터넷 접근을 위해 NAT Instance를 사용합니다.
 
-- Source/Dest Check 비활성화
-- IP Forwarding 활성화
-- iptables MASQUERADE 설정
-- Private Route Table 연결
+설정
 
-검증:
-- Private EC2 → GitHub API OK
-- Private EC2 → apt install OK
+Source/Destination Check : Disabled
 
----
+IP Forwarding : Enabled
 
-## 3 Monitoring EC2
+iptables MASQUERADE 설정
 
-역할:
+확인 방법
 
-- Bastion (SSH 진입)
-- GitHub Actions Runner
-- Ansible 실행 노드
-- Prometheus 설치 대상 (관제팀 작업)
+Private EC2에서 실행
 
-IAM Instance Profile 적용:
+curl -4 ifconfig.me
 
-- ec2:DescribeInstances
-- ec2:DescribeTags
-- ssm:GetParameter
+결과
 
-검증:
+NAT Instance Public IP 출력
+6. Monitoring EC2 역할
 
-```bash
-aws ec2 describe-instances --max-results 5 >/dev/null && echo OK
-aws ec2 describe-tags --max-results 5 >/dev/null && echo OK
-```
+Monitoring EC2는 다음 역할을 수행합니다.
 
----
+Monitoring EC2
+ ├ Bastion (SSH 접속)
+ ├ GitHub Actions Self-hosted Runner
+ ├ Ansible 실행 노드
+ └ Prometheus / Grafana 설치 예정
+7. GitHub Actions Runner 자동화
 
-## 4 ASG (Service)
+Monitoring EC2의 userdata에서 다음 작업이 자동 수행됩니다.
 
-- Private Subnet 배치
-- Launch Template 사용
-- ALB Target Group 연결
-- Desired / Min / Max 설정
+AWS Region 자동 설정
 
----
+SSM에서 GitHub PAT 조회
 
-## 5 Node Exporter 자동화
+GitHub Org Runner 등록
 
-ASG user_data에 포함:
+systemd 서비스 등록
 
-- node_exporter 설치
-- systemd 등록
-- 자동 실행
+Runner 상태 확인
 
-검증:
+systemctl status actions.runner.*
+8. Auto Scaling Group
 
-```bash
-curl localhost:9100/metrics | head
-systemctl is-active node_exporter
-```
+Service 서버는 ASG로 구성되어 자동 확장이 가능합니다.
 
----
+구성
 
-#  Security Group 설계 (SG → SG)
+Desired : 1
+Min     : 1
+Max     : 2
+HealthCheck : ELB
 
-## ALB SG
-- 80 from 0.0.0.0/0
+HealthCheck
 
-## Service SG (ASG)
-- 8080 from ALB SG
-- 9100 from Monitoring SG
-- 8080 from Monitoring SG (옵션)
-- 22 from Monitoring SG
+ALB Target Group
+Port : 8080
+Path : /
+9. Prometheus Monitoring 준비
 
-## Monitoring SG
-- 22 / 3000 / 9090 from allowed CIDR
-- outbound all
+ASG Launch Template의 userdata에서
+node_exporter가 자동 설치됩니다.
 
----
+설치 내용
 
-#  Tag 규칙 (Prometheus Discovery 기준)
+apt-get install prometheus-node-exporter
+systemctl enable --now prometheus-node-exporter
 
-- Role = monitoring | asg | nat
-- PrometheusScrape = true (ASG)
+확인
 
-IMDS 확인:
+ss -tulnp | grep 9100
 
-```bash
-curl http://169.254.169.254/latest/meta-data/tags/instance/Role
-```
+metrics 확인
 
----
+curl localhost:9100/metrics
 
-#  Prometheus 연동 준비 상태
+Monitoring 서버에서 확인
 
-- Monitoring → ASG :9100 접근 성공
-- IAM EC2 SD 권한 적용 완료
-- Tag 기반 Discovery 가능
-- 신규 ASG 인스턴스 자동 node_exporter 실행
+curl http://<SERVICE_PRIVATE_IP>:9100/metrics
+10. Terraform 구조
 
-관제팀은 Prometheus 설치 후  
-EC2 Service Discovery 설정만 추가하면 자동 수집 가능.
+프로젝트 구조
 
----
+terraform
+ ├ env
+ │   └ dev
+ │       ├ main.tf
+ │       ├ terraform.tfvars
+ │
+ ├ modules
+ │   ├ network
+ │   ├ alb
+ │   ├ asg
+ │   ├ monitoring
+ │   └ nat
 
-#  재현성 보장
+설계 원칙
 
-Terraform 기준:
+모듈 기반 구조
 
-```bash
-terraform destroy
-terraform apply
-```
+환경 분리(dev/prod 확장 가능)
 
-동일 아키텍처 재생성 가능.
+변수 기반 인프라 구성
 
----
-
-# 현재 프로젝트 상태
-
-| 영역 | 상태 |
-|------|------|
-| IaC 구조 | 완료 |
-| Network | 완료 |
-| NAT | 완료 |
-| Monitoring EC2 | 완료 |
-| Runner | 완료 |
-| IAM | 완료 |
-| ALB | 완료 |
-| ASG | 완료 |
-| Node Exporter | 완료 |
-| Prometheus 연동 준비 | 완료 |
-| 서비스 배포 | 타팀 대기 |
-
----
-
-#  담당 역할 (Infra Team)
-
-- Terraform 기반 아키텍처 설계
-- 네트워크 보안 구조 구현
-- NAT 설계 및 검증
-- CD 실행 기반 구축
-- 모니터링 연동 기반 자동화
-- Source of Truth를 코드로 유지
-
----
-## 2. Important Outputs (Terraform)
-아래 값들은 `terraform output`으로 즉시 확인 가능
-Monitoring EC2 (Public): 운영/관제
-
----
-
-## Detailed Architecture (IaC + Monitoring + Runner)
-
-```mermaid
-flowchart TB
-  Internet((Internet))
-
-  subgraph AWS[AWS ap-northeast-2]
-    subgraph VPC[VPC 10.0.0.0/16]
-
-      subgraph PublicA[Public Subnet A]
-        ALB[ALB :80]
-      end
-
-      subgraph PublicB[Public Subnet B]
-        MON[Monitoring EC2
-Grafana :3000
-Prometheus :9090
-GitHub Runner]
-
-        NAT[NAT Instance
-Source/Dest Check OFF]
-      end
-
-      subgraph PrivateA[Private Subnet A]
-        EC2A[ASG EC2
-Nginx :8080]
-      end
-
-      subgraph PrivateB[Private Subnet B]
-        EC2B[ASG EC2
-Nginx :8080]
-      end
-
-      SSM[(SSM SecureString
-/cicd/github/pat)]
-    end
-  end
-
-  GitHub[(GitHub Org ktcloudmini)]
-
-  Internet --> ALB
-  ALB --> EC2A
-  ALB --> EC2B
-
-  EC2A --> NAT
-  EC2B --> NAT
-  NAT --> Internet
-
-  MON --> GitHub
-  MON --> SSM
-```
-
----
-
-# 2. Important Outputs
-
-항상 Terraform output으로 확인
-
-```bash
-cd terraform/env/dev
-terraform output
-```
-
-출력 항목:
-
-* alb_dns_name
-* asg_name
-* monitoring_public_ip
-* vpc_id
-* public_subnet_ids
-* private_subnet_ids
-* target_group_arn
-
----
-
-# 3. Repository Structure
-
-```
-terraform/
-├─ modules/
-│  ├─ network/
-│  ├─ alb/
-│  ├─ asg/
-│  └─ monitoring/
-└─ env/dev/
-```
-
----
-
-# 4. Backend
-
-* S3 Remote State
-* DynamoDB Lock
-
-예시:
-
-```
-s3://ktcloud-tfstate-xxxx/env/dev/terraform.tfstate
-```
-
----
-
-# 5. How to Run
-
-## Init / Plan / Apply
-
-```bash
-cd terraform/env/dev
+11. Terraform 실행 방법
+1. 초기화
 terraform init
+2. 계획 확인
 terraform plan
+3. 인프라 생성
 terraform apply
-```
+12. 인프라 검증 방법
+NAT 검증
 
-## Destroy
+Private 서버에서
 
-```bash
+curl -4 ifconfig.me
+Target Group 상태
+aws elbv2 describe-target-health \
+--target-group-arn <target_group_arn>
+node_exporter 확인
+curl localhost:9100/metrics
+13. 종료
 terraform destroy
-```
+14. 핵심 구현 포인트
 
----
+이번 인프라 구현의 핵심 포인트는 다음과 같습니다.
 
-# 6. Verification
+Terraform 기반 IaC 운영 인프라 구축
 
-## ALB 확인
+Private 기반 보안 아키텍처
 
-```bash
-curl -I http://<alb_dns_name>
-```
+NAT Instance 기반 Outbound 설계
 
-Expected:
+GitHub Runner 자동화
 
-```
-HTTP/1.1 200 OK
-```
+ASG 기반 확장 가능한 구조
 
----
-
-## Target Group
-
-AWS Console → Healthy 확인
-
----
-
-## nginx 확인
-
-```bash
-systemctl status nginx
-curl localhost:8080
-```
-
----
-
-## Private → Internet (NAT)
-
-```bash
-sudo apt update
-curl ifconfig.me
-```
-
----
-
-# 7. Troubleshooting (NAT)
-
-문제: NAT + Monitoring 겸용 시 SSH 불가
-
-조치:
-
-* NAT 전용 EC2 분리
-* Source/Dest Check OFF
-* ip_forward=1
-* MASQUERADE 설정
-
----
-
-# 8. GitHub Actions Self-Hosted Runner
-
-Monitoring EC2에 Org Runner 구성 완료
-
-## 구성
-
-* Org: ktcloudmini
-* Label: self-hosted
-* Service: systemd
-* PAT: SSM SecureString 저장
-
-```
-/cicd/github/pat
-```
-
----
-
-## 상태 확인
-
-```bash
-sudo systemctl status actions.runner*
-```
-
-Expected:
-
-* active (running)
-* Listening for Jobs
-
----
-
-## PAT 변경 시
-
-```bash
-terraform taint module.monitoring.aws_instance.monitoring
-terraform apply
-```
-
----
-
-# 9. Docs
-
-장문 기록은 docs/로 분리
-
-예:
-
-
+Prometheus Monitoring 준비
