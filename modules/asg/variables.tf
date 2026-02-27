@@ -64,3 +64,17 @@ variable "tags" {
   description = "Extra tags"
   default     = {}
 }
+variable "platform_repo_url" {
+  type        = string
+  description = "Public repo URL for ansible-pull"
+}
+
+variable "platform_repo_branch" {
+  type        = string
+  description = "Branch for ansible-pull"
+}
+
+variable "platform_repo_playbook" {
+  type        = string
+  description = "Playbook filename to run via ansible-pull"
+}

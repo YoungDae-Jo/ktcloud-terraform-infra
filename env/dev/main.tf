@@ -179,7 +179,10 @@ module "asg" {
 
   service_sg_id = aws_security_group.service.id
 
-  desired_capacity = var.asg_desired_capacity
-  min_size         = var.asg_min_size
-  max_size         = var.asg_max_size
+  desired_capacity       = var.asg_desired_capacity
+  min_size               = var.asg_min_size
+  max_size               = var.asg_max_size
+  platform_repo_url      = "https://github.com/ktcloudmini/platform.git"
+  platform_repo_branch   = "main"
+  platform_repo_playbook = "deploy_app_pull.yml"
 }

@@ -7,7 +7,11 @@ resource "aws_launch_template" "this" {
   vpc_security_group_ids = [var.service_sg_id]
 
   user_data = base64encode(join("\n", compact([
-    templatefile("${path.module}/userdata_asg.sh.tpl", {}),
+    templatefile("${path.module}/userdata_asg.sh.tpl", {
+      REPO_URL = var.platform_repo_url
+      BRANCH   = var.platform_repo_branch
+      PLAYBOOK = var.platform_repo_playbook
+    }),
     var.user_data
   ])))
 
@@ -45,6 +49,15 @@ resource "aws_autoscaling_group" "this" {
   launch_template {
     id      = aws_launch_template.this.id
     version = "$Latest"
+  }
+
+  instance_refresh {
+    strategy = "Rolling"
+
+    preferences {
+      instance_warmup        = 300
+      min_healthy_percentage = 50
+    }
   }
 
   tag {
