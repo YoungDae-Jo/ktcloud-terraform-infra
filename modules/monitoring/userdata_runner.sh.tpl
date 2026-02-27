@@ -168,3 +168,62 @@ cd "$${RUNNER_DIR}"
 ./svc.sh start
 
 log "Done. Check status with: systemctl status actions.runner.${ORG}.$${RUNNER_NAME}.service"
+
+# ==============================
+# Monitoring Stack (Prometheus + Grafana)
+# ==============================
+
+REPO_URL="https://github.com/ktcloudmini/monitoring.git"
+DIR="/home/ubuntu/monitoring"
+BRANCH="main"
+PROFILE="monitoring"
+
+echo "[monitoring] Installing Docker"
+
+apt-get update -y
+apt-get install -y ca-certificates curl git
+
+if ! command -v docker >/dev/null 2>&1; then
+
+  install -m 0755 -d /etc/apt/keyrings
+
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+  -o /etc/apt/keyrings/docker.asc
+
+  chmod a+r /etc/apt/keyrings/docker.asc
+
+  . /etc/os-release
+
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+https://download.docker.com/linux/ubuntu ${VERSION_CODENAME} stable" \
+> /etc/apt/sources.list.d/docker.list
+
+  apt-get update -y
+
+  apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+fi
+
+systemctl enable --now docker
+usermod -aG docker ubuntu || true
+
+echo "[monitoring] Clone monitoring repo"
+
+if [ ! -d "$DIR/.git" ]; then
+  sudo -u ubuntu git clone -b "$BRANCH" "$REPO_URL" "$DIR"
+else
+  cd "$DIR"
+  sudo -u ubuntu git fetch origin
+  sudo -u ubuntu git checkout "$BRANCH"
+  sudo -u ubuntu git pull --rebase
+fi
+
+echo "[monitoring] Starting docker compose"
+
+cd "$DIR"
+
+sudo -u ubuntu sudo docker compose --profile "$PROFILE" up -d
+
+sudo -u ubuntu sudo docker compose ps
+
+echo "[monitoring] Prometheus/Grafana started"
