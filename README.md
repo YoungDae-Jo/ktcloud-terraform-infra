@@ -230,3 +230,41 @@ GitHub Runner 자동화
 ASG 기반 확장 가능한 구조
 
 Prometheus Monitoring 준비
+
+## 15. 실행 방법 (Quick Start)
+
+### 1. Repository Clone
+
+```bash
+git clone https://github.com/ktcloudmini/infra.git
+cd infra
+2. Terraform 변수 설정
+
+예시 파일을 복사합니다.
+
+cp env/dev/terraform.tfvars.example env/dev/terraform.tfvars
+
+필요 시 값을 수정합니다.
+
+nano env/dev/terraform.tfvars
+3. Terraform 실행
+cd env/dev
+terraform init
+terraform plan
+terraform apply
+4. 인프라 검증
+
+NAT 확인
+
+curl -4 ifconfig.me
+
+Node Exporter 확인
+
+ss -tulnp | grep 9100
+
+ALB Target 상태 확인
+
+aws elbv2 describe-target-health \
+--target-group-arn <target_group_arn>
+5. 인프라 삭제
+terraform destroy
