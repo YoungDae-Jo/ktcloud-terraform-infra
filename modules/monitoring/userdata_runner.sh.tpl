@@ -192,10 +192,10 @@ if ! command -v docker >/dev/null 2>&1; then
 
   chmod a+r /etc/apt/keyrings/docker.asc
 
-  . /etc/os-release
+  CODENAME="$(. /etc/os-release && echo "$VERSION_CODENAME")"
 
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
-https://download.docker.com/linux/ubuntu ${VERSION_CODENAME} stable" \
+https://download.docker.com/linux/ubuntu $${CODENAME} stable" \
 > /etc/apt/sources.list.d/docker.list
 
   apt-get update -y
@@ -223,7 +223,6 @@ echo "[monitoring] Starting docker compose"
 cd "$DIR"
 
 sudo -u ubuntu sudo docker compose --profile "$PROFILE" up -d
-
 sudo -u ubuntu sudo docker compose ps
 
 echo "[monitoring] Prometheus/Grafana started"
