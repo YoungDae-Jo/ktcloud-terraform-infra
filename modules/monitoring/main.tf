@@ -13,12 +13,6 @@ data "aws_ami" "ubuntu_2204" {
   }
 }
 
-############################################
-# IAM: use existing Role, create Instance Profile
-# - Role(ReadTagsForAnsible) already exists in the account
-# - EC2 requires an Instance Profile to attach a role
-############################################
-
 data "aws_iam_role" "read_tags_for_ansible" {
   name = "ReadTagsForAnsible"
 }
@@ -29,22 +23,16 @@ data "aws_iam_instance_profile" "read_tags_for_ansible" {
 
 data "aws_iam_policy_document" "runner_ssm_policy" {
   statement {
-    effect = "Allow"
-    actions = [
-      "ssm:GetParameter"
-    ]
-    resources = [
-      "arn:aws:ssm:*:*:parameter${var.ssm_pat_param_name}"
-    ]
+    effect    = "Allow"
+    actions   = ["ssm:GetParameter"]
+    resources = ["arn:aws:ssm:*:*:parameter${var.ssm_pat_param_name}"]
   }
 
   dynamic "statement" {
     for_each = (try(var.ssm_kms_key_arn, "") != "") ? [1] : []
     content {
-      effect = "Allow"
-      actions = [
-        "kms:Decrypt"
-      ]
+      effect    = "Allow"
+      actions   = ["kms:Decrypt"]
       resources = [var.ssm_kms_key_arn]
     }
   }
@@ -58,11 +46,8 @@ resource "aws_iam_role_policy" "read_pat_from_ssm" {
 
 data "aws_iam_policy_document" "monitoring_ec2_sd_policy" {
   statement {
-    effect = "Allow"
-    actions = [
-      "ec2:DescribeInstances",
-      "ec2:DescribeTags"
-    ]
+    effect    = "Allow"
+    actions   = ["ec2:DescribeInstances", "ec2:DescribeTags"]
     resources = ["*"]
   }
 }
@@ -71,10 +56,6 @@ resource "aws_iam_role_policy" "monitoring_ec2_sd" {
   name   = "MonitoringEC2ServiceDiscovery"
   role   = data.aws_iam_role.read_tags_for_ansible.id
   policy = data.aws_iam_policy_document.monitoring_ec2_sd_policy.json
-resource "aws_iam_instance_profile" "read_tags_for_ansible" {
-  # Profile name must be unique in the account
-  name = "ReadTagsForAnsible-profile"
-  role = data.aws_iam_role.read_tags_for_ansible.name
 }
 
 resource "aws_security_group" "monitoring" {
@@ -82,25 +63,6 @@ resource "aws_security_group" "monitoring" {
   description = "Monitoring/Runner SG (Grafana/Prometheus/SSH)"
   vpc_id      = var.vpc_id
 
-  # Grafana
-  ingress {
-    description = "Grafana from Admin CIDRs"
-    from_port   = 3000
-    to_port     = 3000
-    protocol    = "tcp"
-    cidr_blocks = var.allowed_ssh_cidrs
-  }
-
-  # Prometheus
-  ingress {
-    description = "Prometheus UI/API from Admin CIDRs"
-    from_port   = 9090
-    to_port     = 9090
-    protocol    = "tcp"
-    cidr_blocks = var.allowed_ssh_cidrs
-  }
-
-  # SSH
   ingress {
     from_port   = 22
     to_port     = 22
@@ -152,8 +114,6 @@ resource "aws_instance" "monitoring" {
   user_data = local.user_data
 
   iam_instance_profile = data.aws_iam_instance_profile.read_tags_for_ansible.name
-  # Always attach IAM instance profile for Ansible inventory/tag reads
-  iam_instance_profile = aws_iam_instance_profile.read_tags_for_ansible.name
 
   tags = {
     Name = "${var.project_name}-monitoring"

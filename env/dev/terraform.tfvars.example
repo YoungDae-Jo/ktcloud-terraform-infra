@@ -1,0 +1,27 @@
+env = "dev"
+
+project_name = "KTCloud-INFRA-PROJECT"
+
+# VPC
+vpc_cidr = "10.0.0.0/16"
+
+# Public Subnets
+public_subnet_cidrs = [
+  "10.0.1.0/24",
+  "10.0.2.0/24"
+]
+
+# Private Subnets
+private_subnet_cidrs = [
+  "10.0.11.0/24",
+  "10.0.12.0/24"
+]
+
+# EC2
+instance_type = "t3.micro"
+
+# GitHub Actions Runner
+github_org = "ktcloudmini"
+
+# SSM Parameter Store name for GitHub PAT
+ssm_pat_param_name = "/github/pat"

@@ -1,105 +1,66 @@
 variable "name" {
-  type = string
-}
-
-variable "vpc_id" {
-  type    = string
-  default = null
-}
-
-variable "private_subnet_ids" {
-  type = list(string)
-}
-
-variable "target_group_arns" {
-  type    = list(string)
-  default = []
-}
-
-variable "ami_id" {
-  type = string
-}
-
-variable "instance_type" {
-  type    = string
-  default = "t3.micro"
-}
-
-variable "key_name" {
-  type    = string
-  default = null
-}
-
-variable "service_sg_id" {
-  type = string
-  description = "ASG base name"
   type        = string
+  description = "ASG name"
 }
 
 variable "vpc_id" {
+  type        = string
   description = "VPC ID"
-  type        = string
 }
 
 variable "private_subnet_ids" {
-  description = "Private subnet IDs for ASG"
   type        = list(string)
+  description = "Private subnet IDs for ASG"
 }
 
 variable "target_group_arns" {
-  description = "ALB target group ARNs to attach"
   type        = list(string)
-  default     = []
+  description = "Target group ARNs to attach"
 }
 
 variable "ami_id" {
-  description = "AMI ID for service instances"
   type        = string
+  description = "AMI ID"
 }
 
 variable "instance_type" {
-  description = "EC2 instance type"
   type        = string
-  default     = "t3.micro"
+  description = "EC2 instance type"
 }
 
 variable "key_name" {
-  description = "EC2 key pair name (optional if using SSM only)"
   type        = string
-  default     = null
+  description = "EC2 key pair name"
 }
 
 variable "service_sg_id" {
-  description = "Security Group ID for service instances"
   type        = string
+  description = "Security group ID for service instances"
 }
 
 variable "desired_capacity" {
-  type    = number
-  default = 1
+  type        = number
+  description = "Desired capacity"
 }
 
 variable "min_size" {
-  type    = number
-  default = 1
+  type        = number
+  description = "Minimum size"
 }
 
 variable "max_size" {
-  type    = number
-  default = 2
+  type        = number
+  description = "Maximum size"
 }
 
 variable "user_data" {
-  type    = string
-  default = ""
-}
-
-variable "iam_instance_profile_name" {
-  type    = string
-  default = null
-}
-  description = "User data script (plain text). Will be base64-encoded."
   type        = string
+  description = "Optional user_data script"
   default     = ""
 }
 
+variable "tags" {
+  type        = map(string)
+  description = "Extra tags"
+  default     = {}
+}

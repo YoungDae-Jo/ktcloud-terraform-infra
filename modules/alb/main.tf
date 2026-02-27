@@ -1,29 +1,35 @@
 resource "aws_lb" "this" {
   name               = "${var.project_name}-alb"
-  load_balancer_type = "application"
   internal           = false
+  load_balancer_type = "application"
+  security_groups    = [var.alb_sg_id]
+  subnets            = var.public_subnet_ids
 
-  subnets         = var.public_subnet_ids
-  security_groups = [var.alb_sg_id]
+  tags = {
+    Name = "${var.project_name}-alb"
+  }
 }
 
 resource "aws_lb_target_group" "this" {
   name     = "${var.project_name}-tg"
-  name_prefix     = "tg-"
   port     = 8080
   protocol = "HTTP"
   vpc_id   = var.vpc_id
 
   health_check {
-    path                = "/"
-    port                = "traffic-port"
-    path                = "/"        # /health 엔드포인트가 있으면 "/health"로 변경
-    port                = "8080"
-    matcher             = "200-399"
+    enabled             = true
     healthy_threshold   = 2
     unhealthy_threshold = 2
-    interval            = 30
+    interval            = 15
     timeout             = 5
+    matcher             = "200-399"
+    path                = "/"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+  }
+
+  tags = {
+    Name = "${var.project_name}-tg"
   }
 }
 
@@ -37,4 +43,3 @@ resource "aws_lb_listener" "http" {
     target_group_arn = aws_lb_target_group.this.arn
   }
 }
-

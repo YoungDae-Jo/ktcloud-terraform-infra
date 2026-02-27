@@ -1,18 +1,42 @@
 # Terraform
-**/.terraform/*
+.terraform/
 *.tfstate
 *.tfstate.*
-*.tfvars
 crash.log
+crash.*.log
+
+# Terraform override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform plan files
+*.tfplan
+
+# Terraform variable files (민감 정보)
+terraform.tfvars
+*.auto.tfvars
+
+# Terraform CLI config
+.terraformrc
+terraform.rc
+
+# Local environment files
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
 *.log
 
-# Sensitive / keys
-*.pem
-
-# OS / Editor
-.DS_Store
-.idea/
-.vscode/
-
-# Misc
-*.swp
+# Backup files
+*.backup
+*.bak

@@ -1,7 +1,6 @@
 ############################################
 # AMI
 ############################################
-
 data "aws_ami" "ubuntu_2204" {
   most_recent = true
   owners      = ["099720109477"]
@@ -20,7 +19,6 @@ data "aws_ami" "ubuntu_2204" {
 ############################################
 # Network
 ############################################
-
 module "network" {
   source = "../../modules/network"
 
@@ -30,6 +28,9 @@ module "network" {
   private_subnet_cidrs = var.private_subnet_cidrs
 }
 
+############################################
+# ALB SG
+############################################
 resource "aws_security_group" "alb" {
   name        = "${var.project_name}-sg-alb"
   description = "ALB SG"
@@ -51,10 +52,10 @@ resource "aws_security_group" "alb" {
 
   tags = { Name = "${var.project_name}-sg-alb" }
 }
-############################################
-# Monitoring EC2 (Bastion)
-############################################
 
+############################################
+# Monitoring EC2 (Bastion / Runner / Ansible)
+############################################
 module "monitoring" {
   source = "../../modules/monitoring"
 
@@ -72,11 +73,15 @@ module "monitoring" {
   runner_labels      = var.runner_labels
 }
 
+############################################
+# Service SG (ASG instances)
+############################################
 resource "aws_security_group" "service" {
   name        = "${var.project_name}-sg-service"
   description = "Service SG (ASG instances)"
   vpc_id      = module.network.vpc_id
 
+  # App traffic from ALB
   ingress {
     from_port       = 8080
     to_port         = 8080
@@ -84,6 +89,7 @@ resource "aws_security_group" "service" {
     security_groups = [aws_security_group.alb.id]
   }
 
+  # (Optional) app access from monitoring
   ingress {
     from_port       = 8080
     to_port         = 8080
@@ -91,63 +97,24 @@ resource "aws_security_group" "service" {
     security_groups = [module.monitoring.monitoring_sg_id]
   }
 
+  # Node exporter from monitoring
   ingress {
+    description     = "Node Exporter from Monitoring"
     from_port       = 9100
     to_port         = 9100
     protocol        = "tcp"
     security_groups = [module.monitoring.monitoring_sg_id]
   }
 
+  # SSH from monitoring (bastion)
   ingress {
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
     security_groups = [module.monitoring.monitoring_sg_id]
-############################################
-# NAT (Public EC2 + EIP + Private RT default route)
-############################################
-
-module "nat" {
-  source = "../../modules/nat"
-
-  project_name = var.project_name
-  vpc_id       = module.network.vpc_id
-
-  # public_subnet_ids는 list -> 하나 선택
-  public_subnet_id       = module.network.public_subnet_ids[0]
-  private_route_table_id = module.network.private_route_table_id
-  vpc_cidr               = module.network.vpc_cidr
-  private_subnet_cidrs   = var.private_subnet_cidrs
-
-  ami_id        = data.aws_ami.ubuntu_2204.id
-  instance_type = "t3.micro"
-  key_name      = var.key_name
-  bastion_sg_id = module.monitoring.monitoring_sg_id
-
-  tags = {
-    Environment = var.env
-    ManagedBy   = "Terraform"
-  }
-}
-
-############################################
-# ALB Security Group
-############################################
-
-resource "aws_security_group" "alb" {
-  name   = "${var.project_name}-alb-sg"
-  vpc_id = module.network.vpc_id
-
-  ingress {
-    description = "HTTP from Internet"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
-    description = "ALL outbound"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -155,15 +122,11 @@ resource "aws_security_group" "alb" {
   }
 
   tags = { Name = "${var.project_name}-sg-service" }
-  tags = {
-    Name = "${var.project_name}-alb-sg"
-  }
 }
 
 ############################################
-# ALB Module
+# ALB
 ############################################
-
 module "alb" {
   source = "../../modules/alb"
 
@@ -173,6 +136,9 @@ module "alb" {
   alb_sg_id         = aws_security_group.alb.id
 }
 
+############################################
+# NAT Instance
+############################################
 module "nat" {
   source = "../../modules/nat"
 
@@ -192,82 +158,12 @@ module "nat" {
   tags = {
     Name = "${var.project_name}-nat"
     Role = "nat"
-
-  alb_sg_id = aws_security_group.alb.id
-}
-
-############################################
-# Service Security Group
-############################################
-
-resource "aws_security_group" "service" {
-  name   = "${var.project_name}-service-sg"
-  vpc_id = module.network.vpc_id
-
-  ##################################################
-  # ALB → Service (HTTP)
-  ##################################################
-  ingress {
-    description     = "HTTP from ALB"
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
-  }
-
-  ##################################################
-  # ALB → Service (App 8080)
-  ##################################################
-  ingress {
-    description     = "App from ALB (8080)"
-    from_port       = 8080
-    to_port         = 8080
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
-  }
-
-  ##################################################
-  # Monitoring(Bastion) → Service (SSH)
-  ##################################################
-  ingress {
-    description     = "SSH from Monitoring Bastion"
-    from_port       = 22
-    to_port         = 22
-    protocol        = "tcp"
-    security_groups = [module.monitoring.monitoring_sg_id]
-  }
-
-  ##################################################
-  # Monitoring(Prometheus) → Service (Node Exporter 9100)
-  ##################################################
-  ingress {
-    description     = "Node Exporter from Monitoring"
-    from_port       = 9100
-    to_port         = 9100
-    protocol        = "tcp"
-    security_groups = [module.monitoring.monitoring_sg_id]
-  }
-
-  ##################################################
-  # Outbound
-  ##################################################
-  egress {
-    description = "ALL outbound"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "${var.project_name}-service-sg"
   }
 }
 
 ############################################
-# ASG Module
+# ASG (Service)
 ############################################
-
 module "asg" {
   source = "../../modules/asg"
 
@@ -287,39 +183,3 @@ module "asg" {
   min_size         = var.asg_min_size
   max_size         = var.asg_max_size
 }
-  name               = var.project_name
-  vpc_id             = module.network.vpc_id
-  private_subnet_ids = module.network.private_subnet_ids
-  target_group_arns  = [module.alb.target_group_arn]
-
-  ami_id        = data.aws_ami.ubuntu_2204.id
-  instance_type = var.service_instance_type
-  key_name      = var.key_name
-  service_sg_id = aws_security_group.service.id
-
-  desired_capacity = var.asg_desired_capacity
-  min_size         = var.asg_min_size
-  max_size         = var.asg_max_size
-
-  ##################################################
-  # User Data — nginx 자동 설치
-  ##################################################
-  user_data = <<-EOF
-  #!/bin/bash
-  set -eux
-
-  apt-get update -y
-  apt-get install -y nginx
-
-  # nginx를 8080 포트로 변경
-  sed -i 's/listen 80 default_server;/listen 8080 default_server;/' /etc/nginx/sites-available/default
-  sed -i 's/listen \[::\]:80 default_server;/listen [::]:8080 default_server;/' /etc/nginx/sites-available/default
-
-  nginx -t
-  systemctl enable nginx
-  systemctl restart nginx
-
-  echo "ok - $(hostname)" > /var/www/html/index.html
-EOF
-}
-
